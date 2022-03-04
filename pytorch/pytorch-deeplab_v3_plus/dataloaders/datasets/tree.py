@@ -6,12 +6,14 @@ from torch.utils.data import Dataset
 from mypath import Path
 from torchvision import transforms
 from dataloaders import custom_transforms as tr
+from dataloaders import parameters_tree
+
 
 class VOCSegmentation(Dataset):
     """
     PascalVoc dataset
     """
-    NUM_CLASSES = 7
+    NUM_CLASSES = parameters_tree.CLASS_NUM
 
     def __init__(self,
                  args,
@@ -55,9 +57,9 @@ class VOCSegmentation(Dataset):
                 lines = f.read().splitlines()
 
             for ii, line in enumerate(lines):
-                _image = os.path.join(self._image_dir, line + ".png")
+                _image = os.path.join(self._image_dir, line + ".PNG")
                 print(_image)
-                _cat = os.path.join(self._cat_dir, line + ".png")
+                _cat = os.path.join(self._cat_dir, line + ".PNG")
                 assert os.path.isfile(_image)
                 assert os.path.isfile(_cat)
                 self.im_ids.append(line)
@@ -126,7 +128,7 @@ if __name__ == '__main__':
 
     voc_train = VOCSegmentation(args, split='train')
 
-    dataloader = DataLoader(voc_train, batch_size=5, shuffle=True, num_workers=0)
+    dataloader = DataLoader(voc_train, batch_size=1, shuffle=True, num_workers=0)
 
     for ii, sample in enumerate(dataloader):
         for jj in range(sample["image"].size()[0]):

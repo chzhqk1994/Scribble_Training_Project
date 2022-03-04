@@ -18,11 +18,13 @@ from modeling.deeplab import *
 from utils.saver import Saver
 import time
 import multiprocessing
-
+import torchvision
 from DenseCRFLoss import DenseCRFLoss
 
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+
 global grad_seg 
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 def main():
 
     parser = argparse.ArgumentParser(description="PyTorch DeeplabV3Plus Inference")
@@ -97,7 +99,7 @@ def main():
     model.eval()
     
     composed_transforms = transforms.Compose([
-            tr.FixScaleCropImage(crop_size=args.crop_size),
+            # tr.FixScaleCropImage(crop_size=args.crop_size),
             tr.NormalizeImage(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
             tr.ToTensorImage()])
 
@@ -111,11 +113,14 @@ def main():
             image_path = os.path.join(path, file)
             image_ = Image.open(image_path)
             image_size = image_.size
+            image_org = image_
             image = composed_transforms(image_.convert('RGB')).unsqueeze(0)
             image_cpu = image
             if not args.no_cuda:
                 image = image.cuda()
             start = time.time()
+
+
             output = model(image)
             print('inference time:',time.time()-start)
             pred = output.data.cpu().numpy()

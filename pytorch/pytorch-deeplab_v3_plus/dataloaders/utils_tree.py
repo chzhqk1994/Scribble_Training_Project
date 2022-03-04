@@ -1,6 +1,8 @@
+from dataloaders import parameters_tree
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+
 
 def decode_seg_map_sequence(label_masks, dataset='tree'):
 # def decode_seg_map_sequence(label_masks, dataset='goodroof'):
@@ -29,7 +31,7 @@ def decode_segmap(label_mask, dataset, plot=False):
         n_classes = 4
         label_colours = get_goodroof_labels()
     elif dataset == 'tree':
-        n_classes = 7
+        n_classes = parameters_tree.CLASS_NUM
         label_colours = get_tree_labels()
     elif dataset == 'cityscapes':
         n_classes = 19
@@ -112,7 +114,9 @@ def get_tree_labels():
     Returns:
         np.ndarray with dimensions (21, 3)
     """
-    return np.asarray([[0, 0, 0], [21, 134, 55], [248, 255, 3], [0, 255, 43], [137, 69, 18], [70,255,255], [253, 21, 21]])
+    #  ["bg", "flatroof", "facility", "something", "airconditioner", "round_airconditioner", "garden", "corrugated", "slate", "solarpanel", "heliport", "window"]
+    # return np.asarray([[0, 0, 0], [0, 255, 0], [255, 0, 0], [255, 0, 255], [153, 51, 0], [153, 153, 153], [0, 0, 255], [25, 111, 61], [187,143, 206], [142, 68, 173], [243, 156, 18], [0, 255, 255], [255, 255, 255]])
+    return np.asarray(list(parameters_tree.COLOR_MAP_DICT.values()))
 
 
 def get_goodroof_labels():

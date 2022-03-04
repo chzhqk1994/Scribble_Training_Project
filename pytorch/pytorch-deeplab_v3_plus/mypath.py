@@ -7,9 +7,9 @@ class Path(object):
             # containing RGB images, groundtruth, and scribbles respectively.
             return '/home/qisens/2020.3~/rloss/data/pascal_scribble/'
         elif dataset == 'goodroof':
-            return '/media/qisens/2tb1/goodroof_solarpanel_parkinglot_rooftop_facility__output_with_augmented/'
+            return '/home/qisens/hw/dataset/building_capture/'
         elif dataset == 'tree':
-            return '/home/qisens/2020.3~/rloss/data/tree_scribble/'
+            return '/media/qisens/4tb3/scribble_dataset/building_capture/flat_facility_round_edge_corrugated_slate_panel_garden_heliport/'
         elif dataset == 'sbd':
             return '/path/to/datasets/benchmark_RELEASE/'  # folder that contains dataset/.
         elif dataset == 'cityscapes':

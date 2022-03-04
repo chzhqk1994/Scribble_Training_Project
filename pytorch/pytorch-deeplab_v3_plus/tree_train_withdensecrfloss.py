@@ -4,7 +4,7 @@ import numpy as np
 from tqdm import tqdm
 
 from mypath import Path
-from dataloaders import make_data_loader
+from dataloaders import make_data_loader, parameters_tree
 from dataloaders.custom_transforms import denormalizeimage
 from modeling.sync_batchnorm.replicate import patch_replication_callback
 from modeling.deeplab import *
@@ -17,12 +17,13 @@ from utils.metrics import Evaluator
 
 from DenseCRFLoss import DenseCRFLoss
 
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 class Trainer(object):
     def __init__(self, args):
-        self.label_ls = ["bg", "tree", "roof", "grass", "ground", "obj", "rail"]
-        # self.label_ls = ["bg", "flatroof", "facility", "rooftop"]
+        # self.label_ls = ["bg", "flatroof", "facility", "something", "airconditioner", "round_airconditioner", "graden", "corrugated", "slate", "solarpanel", "heliport"]
+        self.label_ls = list(parameters_tree.LABEL_DICT.keys())
         self.args = args
 
         # Define Saver
@@ -121,8 +122,9 @@ class Trainer(object):
                 image, target = image.cuda(), target.cuda()
             self.scheduler(self.optimizer, i, epoch, self.best_pred, self.writer)
             self.optimizer.zero_grad()
+            #print("Check 1: ", image)
             output = self.model(image)
-            
+            #print("Check 2: ", output)
             celoss = self.criterion(output, target)
             
             if self.args.densecrfloss ==0:
