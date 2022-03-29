@@ -81,7 +81,7 @@ class Scribble:
         segmap = cv2.cvtColor(segmap, cv2.COLOR_RGB2BGR)
         building_img_width, building_img_height = segimg.size
 
-        # origin_tile_img_path = "./run/tree/resnet/13_45_957564.3912121656_1949308.4513075682_Navermap.png"  # tiling 된 이미지
+        # origin_tile_img_path = "./13_45_957564.3912121656_1949308.4513075682_Navermap.png"  # tiling 된 이미지 한 장
         # meter_constant = calculate_meter_constant(origin_tile_img_path)  # 미터상수 계산 (zoom level 변동없으면 미터상수는 0.1171)
         meter_constant = 0.1171  # 640px = 75m, 1px = 0.1171m
 
@@ -178,16 +178,13 @@ class Scribble:
 
 
 if __name__ == '__main__':
-    from PIL import ImageDraw
-    from dataloaders import parameters_tree
-
     gpu_num = 0
-    model_path = './run/tree/resnet/model_best.pth.tar_withwall'
+    model_path = '../pytorch/pytorch-deeplab_v3_plus/run/tree/resnet/model_best.pth.tar_withwall'
     backbone = 'resnet'
     n_class = 13
     dataset = 'tree'
-    input_img_dir = './scribble_test_area/r2cnn_bbox/'
-    output_img_dir = './run/tree/resnet/inference_output/'
+    input_img_dir = '../pytorch/pytorch-deeplab_v3_plus/scribble_test_area/r2cnn_bbox/'
+    output_img_dir = ''
     scribble_obj = Scribble(gpu_num, model_path, backbone, n_class, dataset)
 
     total = 0
@@ -196,37 +193,3 @@ if __name__ == '__main__':
             total += 1
             current_img_file = cv2.imread(os.path.join(input_img_dir, file))
             segmap, flat_only_img = scribble_obj.inference(current_img_file)
-
-            height, width, _ = current_img_file.shape
-            current_img_file = Image.fromarray(cv2.cvtColor(current_img_file, cv2.COLOR_BGR2RGB))
-            segmap = Image.fromarray(cv2.cvtColor(segmap, cv2.COLOR_BGR2RGB))
-            flat_only_img = Image.fromarray(cv2.cvtColor(flat_only_img, cv2.COLOR_BGR2RGB))
-
-            canvas = Image.new('RGB', (width * 3 + 200, height + 80), "white") # 이미지 3장이므로 width * 3
-            draw = ImageDraw.Draw(canvas)
-
-            # text related variables
-            x_offset = 0
-            text_x_offset = round(width / 2)
-            text_y = height + 35
-            text_ls = ["original", "scribble", "flat only"]
-
-            # concatenate images and draw text below them
-            image_ls = [current_img_file, segmap, flat_only_img]
-            for idx, im in enumerate(image_ls):
-                canvas.paste(im, (x_offset, 20))
-                draw.text((text_x_offset, text_y), text_ls[idx], fill=(0, 0, 0))
-                x_offset += width + 10
-                text_x_offset += width
-
-            # display color chart bar
-            bar_x = width * 3
-            bar_y_offset = 10
-            color_bar = parameters_tree.LABEL_DICT
-
-            for key in color_bar.keys():
-                draw.rectangle([(bar_x + 50, bar_y_offset), (bar_x + 80, bar_y_offset + 20)], fill=tuple(parameters_tree.COLOR_MAP_DICT[color_bar[key]]))
-                draw.text((bar_x + 90, bar_y_offset), key, fill=(0, 0, 0))
-                bar_y_offset += 30
-
-            canvas.save(os.path.join(output_img_dir, file))
