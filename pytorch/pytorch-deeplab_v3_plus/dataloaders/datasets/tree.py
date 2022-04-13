@@ -57,11 +57,16 @@ class VOCSegmentation(Dataset):
                 lines = f.read().splitlines()
 
             for ii, line in enumerate(lines):
+                #print(ii, self._image_dir, line)
                 _image = os.path.join(self._image_dir, line + ".PNG")
-                print(_image)
+                #print(_image)
                 _cat = os.path.join(self._cat_dir, line + ".PNG")
-                assert os.path.isfile(_image)
-                assert os.path.isfile(_cat)
+                #if not os.path.exists(_image): _image = os.path.join(self._image_dir, line + ".jpg")
+                #if not os.path.exists(_cat): _cat = os.path.join(self._cat_dir, line + ".jpg")
+                assert os.path.isfile(_image), _image
+                assert os.path.isfile(_cat), _cat
+                #print(_image)
+                #print(_cat)
                 self.im_ids.append(line)
                 self.images.append(_image)
                 self.categories.append(_cat)

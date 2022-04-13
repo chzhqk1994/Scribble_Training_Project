@@ -3,7 +3,7 @@ import wandb
 wandb.init(project="scribble", entity="")
 wandb.config = {
   "learning_rate": 0.007,
-  "epochs": 1000000,
+  "epochs": 50,
   "batch_size": 2
 }
 
@@ -33,7 +33,7 @@ from DenseCRFLoss import DenseCRFLoss
 
 
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 class Trainer(object):
     def __init__(self, args):
@@ -265,7 +265,7 @@ def main():
                         help='backbone name (default: resnet)')
     parser.add_argument('--out-stride', type=int, default=16,
                         help='network output stride (default: 8)')
-    parser.add_argument('--dataset', type=str, default='pascal',
+    parser.add_argument('--dataset', type=str, default='tree',
                         choices=['pascal', 'coco', 'cityscapes', 'tree', 'goodroof'],
                         help='dataset name (default: pascal)')
     parser.add_argument('--use-sbd', action='store_true', default=False,
@@ -284,20 +284,20 @@ def main():
                         choices=['ce', 'focal'],
                         help='loss func type (default: ce)')
     # training hyper params
-    parser.add_argument('--epochs', type=int, default=None, metavar='N',
+    parser.add_argument('--epochs', type=int, default=50, metavar='N',
                         help='number of epochs to train (default: auto)')
     parser.add_argument('--start_epoch', type=int, default=0,
                         metavar='N', help='start epochs (default:0)')
-    parser.add_argument('--batch-size', type=int, default=None,
+    parser.add_argument('--batch-size', type=int, default=2,
                         metavar='N', help='input batch size for \
                                 training (default: auto)')
-    parser.add_argument('--test-batch-size', type=int, default=None,
+    parser.add_argument('--test-batch-size', type=int, default=2,
                         metavar='N', help='input batch size for \
                                 testing (default: auto)')
     parser.add_argument('--use-balanced-weights', action='store_true', default=False,
                         help='whether to use balanced weights (default: False)')
     # optimizer params
-    parser.add_argument('--lr', type=float, default=None, metavar='LR',
+    parser.add_argument('--lr', type=float, default=0.007, metavar='LR',
                         help='learning rate (default: auto)')
     parser.add_argument('--lr-scheduler', type=str, default='poly',
                         choices=['poly', 'step', 'cos'],
@@ -330,18 +330,18 @@ def main():
     parser.add_argument('--no-val', action='store_true', default=False,
                         help='skip validation during training')
     # model saving option
-    parser.add_argument('--save-interval', type=int, default=None,
+    parser.add_argument('--save-interval', type=int, default=100,
                         help='save model interval in epochs')
 
 
     # rloss options
-    parser.add_argument('--densecrfloss', type=float, default=0,
+    parser.add_argument('--densecrfloss', type=float, default=2e-9,
                         metavar='M', help='densecrf loss (default: 0)')
-    parser.add_argument('--rloss-scale',type=float,default=1.0,
+    parser.add_argument('--rloss-scale',type=float,default=0.5,
                         help='scale factor for rloss input, choose small number for efficiency, domain: (0,1]')
     parser.add_argument('--sigma-rgb',type=float,default=15.0,
                         help='DenseCRF sigma_rgb')
-    parser.add_argument('--sigma-xy',type=float,default=80.0,
+    parser.add_argument('--sigma-xy',type=float,default=100.0,
                         help='DenseCRF sigma_xy')
     
 
