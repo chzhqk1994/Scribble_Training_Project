@@ -2,9 +2,9 @@ import argparse
 import wandb
 wandb.init(project="scribble", entity="")
 wandb.config = {
-  "learning_rate": 0.007,
+  "learning_rate": 0.005482,
   "epochs": 1000000,
-  "batch_size": 2
+  "batch_size": 4
 }
 
 import os
@@ -28,12 +28,11 @@ from utils.lr_scheduler import LR_Scheduler
 from utils.saver import Saver
 from utils.summaries import TensorboardSummary
 from utils.metrics import Evaluator
-
 from DenseCRFLoss import DenseCRFLoss
-
 
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+
 
 class Trainer(object):
     def __init__(self, args):
@@ -47,11 +46,11 @@ class Trainer(object):
         # Define Tensorboard Summary
         self.summary = TensorboardSummary(self.saver.experiment_dir)
         self.writer = self.summary.create_summary()
-        
+
         # Define Dataloader
         kwargs = {'num_workers': args.workers, 'pin_memory': True}
         self.train_loader, self.val_loader, self.test_loader, self.nclass = make_data_loader(args, **kwargs)
-        
+
         # Define network
         model = DeepLab(num_classes=self.nclass,
                         backbone=args.backbone,
@@ -79,11 +78,11 @@ class Trainer(object):
             weight = None
         self.criterion = SegmentationLosses(weight=weight, cuda=args.cuda).build_loss(mode=args.loss_type)
         self.model, self.optimizer = model, optimizer
-        
+
         if args.densecrfloss >0:
             self.densecrflosslayer = DenseCRFLoss(weight=args.densecrfloss, sigma_rgb=args.sigma_rgb, sigma_xy=args.sigma_xy, scale_factor=args.rloss_scale)
             print(self.densecrflosslayer)
-        
+
         # Define Evaluator
         self.evaluator = Evaluator(self.nclass)
         # Define lr scheduler
@@ -142,7 +141,7 @@ class Trainer(object):
             output = self.model(image)
             #print("Check 2: ", output.size(), "target : ", target.size())
             celoss = self.criterion(output, target)
-            
+
             if self.args.densecrfloss ==0:
                 loss = celoss
             else:
@@ -158,7 +157,7 @@ class Trainer(object):
             self.optimizer.step()
             train_loss += loss.item()
             train_celoss += celoss.item()
-            
+
             tbar.set_description('Train loss: %.3f = CE loss %.3f + CRF loss: %.3f' 
                              % (train_loss / (i + 1),train_celoss / (i + 1),train_crfloss / (i + 1)))
             self.writer.add_scalar('train/total_loss_iter', loss.item(), i + num_img_tr * epoch)

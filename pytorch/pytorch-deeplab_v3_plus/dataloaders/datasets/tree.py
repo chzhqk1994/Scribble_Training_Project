@@ -7,6 +7,8 @@ from mypath import Path
 from torchvision import transforms
 from dataloaders import custom_transforms as tr
 from dataloaders import parameters_tree
+from collections import Counter
+import json
 
 
 class VOCSegmentation(Dataset):
@@ -28,6 +30,25 @@ class VOCSegmentation(Dataset):
         super().__init__()
         self._base_dir = base_dir
         self._image_dir = os.path.join(self._base_dir, 'original_png')
+        _json_dir = os.path.join(self._base_dir, 'json')
+
+        label_cnt = []
+        for path, dirs, files in os.walk(_json_dir):
+            for file in files:
+                file_path = os.path.join(path, file)
+
+                try:
+                    f = open(file_path)
+                    data = json.load(f)
+                except json.decoder.JSONDecodeError:
+                    print("ERROR: ", file_path)
+
+                for line in data["shapes"]:
+                    label = line["label"]
+                    label_cnt.append(label)
+
+        self.label_cnt = dict(Counter(label_cnt))
+
         if split == 'train':
             # full supervision
             #self._cat_dir = os.path.join(self._base_dir, 'SegmentationClassAug')
