@@ -1,6 +1,6 @@
 import argparse
 import wandb
-wandb.init(project="scribble", entity="")
+wandb.init(project="scribble", entity="", id='wandb_process_id', resume=True)
 wandb.config = {
   "learning_rate": 0.005482,
   "epochs": 1000000,
@@ -49,7 +49,7 @@ class Trainer(object):
 
         # Define Dataloader
         kwargs = {'num_workers': args.workers, 'pin_memory': True}
-        self.train_loader, self.val_loader, self.test_loader, self.nclass = make_data_loader(args, **kwargs)
+        self.train_loader, self.val_loader, self.test_loader, self.nclass, self.label_cnt = make_data_loader(args, **kwargs)
 
         # Define network
         model = DeepLab(num_classes=self.nclass,
@@ -163,9 +163,9 @@ class Trainer(object):
             self.writer.add_scalar('train/total_loss_iter', loss.item(), i + num_img_tr * epoch)
 
             # Show 10 * 3 inference results each epoch
-            if i % (num_img_tr // 10) == 0:
-                global_step = i + num_img_tr * epoch
-                self.summary.visualize_image(self.writer, self.args.dataset, image, target, output, global_step)
+            #if i % (num_img_tr // 10) == 0:
+            #    global_step = i + num_img_tr * epoch
+            #    self.summary.visualize_image(self.writer, self.args.dataset, image, target, output, global_step)
 
         self.writer.add_scalar('train/total_loss_epoch', train_loss, epoch)
         print('[Epoch: %d, numImages: %5d]' % (epoch, i * self.args.batch_size + image.data.shape[0]))
@@ -173,7 +173,7 @@ class Trainer(object):
 
         wandb.log({"train/loss": train_loss})
 
-        wandb.watch(self.model)
+        #wandb.watch(self.model)
 
 
         #if self.args.no_val:
