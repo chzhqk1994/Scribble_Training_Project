@@ -222,7 +222,9 @@ class Trainer(object):
         mIoU = self.evaluator.Mean_Intersection_over_Union()
         mIoU_per_Class = self.evaluator.Mean_Intersection_over_Union_per_Class()
         FWIoU = self.evaluator.Frequency_Weighted_Intersection_over_Union()
+        f1 = self.evaluator.Mean_dice_coef()
         test = mIoU_per_Class[0]
+
         for idx, iou in enumerate(mIoU_per_Class):
             self.writer.add_scalar('IoU_per_Class/{}_IoU'.format(self.label_ls[idx]), iou, epoch)
             self.writer.add_scalar('PixelAcc_per_Class/{}_Acc'.format(self.label_ls[idx]), Acc_per_Class[idx], epoch)
@@ -235,6 +237,7 @@ class Trainer(object):
         self.writer.add_scalar('val/Acc', Acc, epoch)
         self.writer.add_scalar('val/Acc_class', Acc_class, epoch)
         self.writer.add_scalar('val/fwIoU', FWIoU, epoch)
+        self.writer.add_scalar('val/f1_score', f1, epoch)
         print('Validation:')
         print('[Epoch: %d, numImages: %5d]' % (epoch, i * self.args.batch_size + image.data.shape[0]))
         print("Acc:{}, Acc_class:{}, mIoU:{}, fwIoU: {}".format(Acc, Acc_class, mIoU, FWIoU))
@@ -242,7 +245,10 @@ class Trainer(object):
 
         wandb.log({"val/Loss": test_loss,
                    "val/Accuracy": Acc,
+                   "val/Acurracy_class": Acc_class,
                    "val/mIoU": mIoU,
+                   "val/FwIoU": FWIoU,
+                   "val/f1_score": f1,
                    "val/best_predicted": self.best_pred
         })
 

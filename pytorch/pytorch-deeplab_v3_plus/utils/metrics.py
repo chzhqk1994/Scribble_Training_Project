@@ -20,6 +20,13 @@ class Evaluator(object):
         Acc = np.diag(self.confusion_matrix) / self.confusion_matrix.sum(axis=1)
         return Acc
 
+    def Mean_dice_coef(self):
+        # mean f1 score
+        dice = np.diag(self.confusion_matrix) / (
+                    np.sum(self.confusion_matrix, axis=1) + np.sum(self.confusion_matrix, axis=0))
+        dice = 2*np.nanmean(dice)
+        return dice
+
     def Mean_Intersection_over_Union(self):
         MIoU = np.diag(self.confusion_matrix) / (
                     np.sum(self.confusion_matrix, axis=1) + np.sum(self.confusion_matrix, axis=0) -
