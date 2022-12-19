@@ -1,6 +1,6 @@
 import argparse
 import wandb
-wandb.init(project="scribble", entity="", id='wall_to_concrete_augment_f1_mAP_dataset_added', resume=True)
+wandb.init(project="scribble", entity="", id='', resume=True)
 wandb.config = {
   "learning_rate": 0.005482,
   "epochs": 1000000,
@@ -229,13 +229,22 @@ class Trainer(object):
         test = mIoU_per_Class[0]
 
         for idx, iou in enumerate(mIoU_per_Class):
-            self.writer.add_scalar('IoU_per_Class/{}_IoU'.format(self.label_ls[idx]), iou, epoch)
-            self.writer.add_scalar('PixelAcc_per_Class/{}_Acc'.format(self.label_ls[idx]), Acc_per_Class[idx], epoch)
-            self.writer.add_scalar('F1 Score/{}_f1'.format(self.label_ls[idx]), f1_each[self.label_ls[idx]], epoch)
-            wandb.log({'IoU_per_Class/{}_IoU'.format(self.label_ls[idx]): iou,
-                       'PixelAcc_per_Class/{}_Acc'.format(self.label_ls[idx]): Acc_per_Class[idx],
-                       'F1_Score_per_Class/{}_f1'.format(self.label_ls[idx]): f1_each[self.label_ls[idx]]
-            })
+            if self.label_ls[idx] in ['waterproof', 'concrete']:
+                self.writer.add_scalar('IoU_per_Class/flatroof_{}_IoU'.format(self.label_ls[idx]), iou, epoch)
+                self.writer.add_scalar('PixelAcc_per_Class/flatroof_{}_Acc'.format(self.label_ls[idx]), Acc_per_Class[idx], epoch)
+                self.writer.add_scalar('F1 Score/flatroof_{}_f1'.format(self.label_ls[idx]), f1_each[self.label_ls[idx]], epoch)
+                wandb.log({'IoU_per_Class/flatroof_{}_IoU'.format(self.label_ls[idx]): iou,
+                           'PixelAcc_per_Class/flatroof_{}_Acc'.format(self.label_ls[idx]): Acc_per_Class[idx],
+                           'F1_Score_per_Class/flatroof_{}_f1'.format(self.label_ls[idx]): f1_each[self.label_ls[idx]]
+                })
+            else:
+                self.writer.add_scalar('IoU_per_Class/{}_IoU'.format(self.label_ls[idx]), iou, epoch)
+                self.writer.add_scalar('PixelAcc_per_Class/{}_Acc'.format(self.label_ls[idx]), Acc_per_Class[idx], epoch)
+                self.writer.add_scalar('F1 Score/{}_f1'.format(self.label_ls[idx]), f1_each[self.label_ls[idx]], epoch)
+                wandb.log({'IoU_per_Class/{}_IoU'.format(self.label_ls[idx]): iou,
+                           'PixelAcc_per_Class/{}_Acc'.format(self.label_ls[idx]): Acc_per_Class[idx],
+                           'F1_Score_per_Class/{}_f1'.format(self.label_ls[idx]): f1_each[self.label_ls[idx]]
+                })
 
         self.writer.add_scalar('val/total_loss_epoch', test_loss, epoch)
         self.writer.add_scalar('val/mIoU', mIoU, epoch)

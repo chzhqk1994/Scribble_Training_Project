@@ -1,10 +1,10 @@
 import argparse
 import wandb
-wandb.init(project="scribble", entity="", id='wall_to_concrete_augment_f1_mAP_dataset_added', resume=True)
+wandb.init(project="scribble", entity="")
 wandb.config = {
-  "learning_rate": 0.005482,
-  "epochs": 1000000,
-  "batch_size": 4
+  "learning_rate": 0.007,
+  "epochs": 50,
+  "batch_size": 2
 }
 
 import os
@@ -15,8 +15,7 @@ from PIL import Image
 from mypath import Path
 from dataloaders import make_data_loader, parameters_tree
 
-# class_labels = dict([(float(value), key) for key, value in parameters_tree.LABEL_DICT.items()])
-class_labels = dict([(value, key) for key, value in parameters_tree.LABEL_DICT.items()])
+class_labels = dict([(float(value), key) for key, value in parameters_tree.LABEL_DICT.items()])
 from dataloaders.utils_tree import decode_segmap
 from torchvision.transforms.functional import to_pil_image
 
@@ -29,11 +28,12 @@ from utils.lr_scheduler import LR_Scheduler
 from utils.saver import Saver
 from utils.summaries import TensorboardSummary
 from utils.metrics import Evaluator
+
 from DenseCRFLoss import DenseCRFLoss
 
-os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
+os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 class Trainer(object):
     def __init__(self, args):
@@ -47,11 +47,11 @@ class Trainer(object):
         # Define Tensorboard Summary
         self.summary = TensorboardSummary(self.saver.experiment_dir)
         self.writer = self.summary.create_summary()
-
+        
         # Define Dataloader
         kwargs = {'num_workers': args.workers, 'pin_memory': True}
-        self.train_loader, self.val_loader, self.test_loader, self.nclass, self.label_cnt = make_data_loader(args, **kwargs)
-
+        self.train_loader, self.val_loader, self.test_loader, self.nclass = make_data_loader(args, **kwargs)
+        
         # Define network
         model = DeepLab(num_classes=self.nclass,
                         backbone=args.backbone,
@@ -79,11 +79,11 @@ class Trainer(object):
             weight = None
         self.criterion = SegmentationLosses(weight=weight, cuda=args.cuda).build_loss(mode=args.loss_type)
         self.model, self.optimizer = model, optimizer
-
+        
         if args.densecrfloss >0:
             self.densecrflosslayer = DenseCRFLoss(weight=args.densecrfloss, sigma_rgb=args.sigma_rgb, sigma_xy=args.sigma_xy, scale_factor=args.rloss_scale)
             print(self.densecrflosslayer)
-
+        
         # Define Evaluator
         self.evaluator = Evaluator(self.nclass)
         # Define lr scheduler
@@ -142,7 +142,7 @@ class Trainer(object):
             output = self.model(image)
             #print("Check 2: ", output.size(), "target : ", target.size())
             celoss = self.criterion(output, target)
-
+            
             if self.args.densecrfloss ==0:
                 loss = celoss
             else:
@@ -158,15 +158,15 @@ class Trainer(object):
             self.optimizer.step()
             train_loss += loss.item()
             train_celoss += celoss.item()
-
+            
             tbar.set_description('Train loss: %.3f = CE loss %.3f + CRF loss: %.3f' 
                              % (train_loss / (i + 1),train_celoss / (i + 1),train_crfloss / (i + 1)))
             self.writer.add_scalar('train/total_loss_iter', loss.item(), i + num_img_tr * epoch)
 
             # Show 10 * 3 inference results each epoch
-            #if i % (num_img_tr // 10) == 0:
-            #    global_step = i + num_img_tr * epoch
-            #    self.summary.visualize_image(self.writer, self.args.dataset, image, target, output, global_step)
+            if i % (num_img_tr // 10) == 0:
+                global_step = i + num_img_tr * epoch
+                self.summary.visualize_image(self.writer, self.args.dataset, image, target, output, global_step)
 
         self.writer.add_scalar('train/total_loss_epoch', train_loss, epoch)
         print('[Epoch: %d, numImages: %5d]' % (epoch, i * self.args.batch_size + image.data.shape[0]))
@@ -174,7 +174,7 @@ class Trainer(object):
 
         wandb.log({"train/loss": train_loss})
 
-        #wandb.watch(self.model)
+        wandb.watch(self.model)
 
 
         #if self.args.no_val:
@@ -212,9 +212,9 @@ class Trainer(object):
             self.evaluator.add_batch(target, pred)
 
             origin_grid_image, inference_grid_image = self.summary.visualize_image_eval(self.args.dataset, image, output)
-            # wandb.log({"image": wandb.Image(to_pil_image(origin_grid_image)),
-            #            "predicted": wandb.Image(inference_grid_image)
-            # })
+            wandb.log({"image": wandb.Image(to_pil_image(origin_grid_image)),
+                       "predicted": wandb.Image(inference_grid_image)
+            })
 
         # Fast test during the training
         Acc = self.evaluator.Pixel_Accuracy()
@@ -223,39 +223,27 @@ class Trainer(object):
         mIoU = self.evaluator.Mean_Intersection_over_Union()
         mIoU_per_Class = self.evaluator.Mean_Intersection_over_Union_per_Class()
         FWIoU = self.evaluator.Frequency_Weighted_Intersection_over_Union()
-        f1, f1_each = self.evaluator.Mean_dice_coef(class_labels)
-        mAP = self.evaluator.Mean_Average_Precision()
-
         test = mIoU_per_Class[0]
-
         for idx, iou in enumerate(mIoU_per_Class):
             self.writer.add_scalar('IoU_per_Class/{}_IoU'.format(self.label_ls[idx]), iou, epoch)
             self.writer.add_scalar('PixelAcc_per_Class/{}_Acc'.format(self.label_ls[idx]), Acc_per_Class[idx], epoch)
-            self.writer.add_scalar('F1 Score/{}_f1'.format(self.label_ls[idx]), f1_each[self.label_ls[idx]], epoch)
             wandb.log({'IoU_per_Class/{}_IoU'.format(self.label_ls[idx]): iou,
-                       'PixelAcc_per_Class/{}_Acc'.format(self.label_ls[idx]): Acc_per_Class[idx],
-                       'F1_Score_per_Class/{}_f1'.format(self.label_ls[idx]): f1_each[self.label_ls[idx]]
+                       'PixelAcc_per_Class/{}_Acc'.format(self.label_ls[idx]): Acc_per_Class[idx]
             })
 
         self.writer.add_scalar('val/total_loss_epoch', test_loss, epoch)
         self.writer.add_scalar('val/mIoU', mIoU, epoch)
-        self.writer.add_scalar('val/mAP', mAP, epoch)
         self.writer.add_scalar('val/Acc', Acc, epoch)
         self.writer.add_scalar('val/Acc_class', Acc_class, epoch)
         self.writer.add_scalar('val/fwIoU', FWIoU, epoch)
-        self.writer.add_scalar('val/f1_score', f1, epoch)
         print('Validation:')
-        # print('[Epoch: %d, numImages: %5d]' % (epoch, i * self.args.batch_size + image.data.shape[0]))
+        print('[Epoch: %d, numImages: %5d]' % (epoch, i * self.args.batch_size + image.data.shape[0]))
         print("Acc:{}, Acc_class:{}, mIoU:{}, fwIoU: {}".format(Acc, Acc_class, mIoU, FWIoU))
         print('Loss: %.3f' % test_loss)
 
         wandb.log({"val/Loss": test_loss,
                    "val/Accuracy": Acc,
-                   "val/Acurracy_class": Acc_class,
                    "val/mIoU": mIoU,
-                   "val/mAP": mAP,
-                   "val/FwIoU": FWIoU,
-                   "val/f1_score": f1,
                    "val/best_predicted": self.best_pred
         })
 
@@ -277,7 +265,7 @@ def main():
                         help='backbone name (default: resnet)')
     parser.add_argument('--out-stride', type=int, default=16,
                         help='network output stride (default: 8)')
-    parser.add_argument('--dataset', type=str, default='pascal',
+    parser.add_argument('--dataset', type=str, default='tree',
                         choices=['pascal', 'coco', 'cityscapes', 'tree', 'goodroof'],
                         help='dataset name (default: pascal)')
     parser.add_argument('--use-sbd', action='store_true', default=False,
@@ -296,20 +284,20 @@ def main():
                         choices=['ce', 'focal'],
                         help='loss func type (default: ce)')
     # training hyper params
-    parser.add_argument('--epochs', type=int, default=None, metavar='N',
+    parser.add_argument('--epochs', type=int, default=50, metavar='N',
                         help='number of epochs to train (default: auto)')
     parser.add_argument('--start_epoch', type=int, default=0,
                         metavar='N', help='start epochs (default:0)')
-    parser.add_argument('--batch-size', type=int, default=None,
+    parser.add_argument('--batch-size', type=int, default=2,
                         metavar='N', help='input batch size for \
                                 training (default: auto)')
-    parser.add_argument('--test-batch-size', type=int, default=None,
+    parser.add_argument('--test-batch-size', type=int, default=2,
                         metavar='N', help='input batch size for \
                                 testing (default: auto)')
     parser.add_argument('--use-balanced-weights', action='store_true', default=False,
                         help='whether to use balanced weights (default: False)')
     # optimizer params
-    parser.add_argument('--lr', type=float, default=None, metavar='LR',
+    parser.add_argument('--lr', type=float, default=0.007, metavar='LR',
                         help='learning rate (default: auto)')
     parser.add_argument('--lr-scheduler', type=str, default='poly',
                         choices=['poly', 'step', 'cos'],
@@ -342,18 +330,18 @@ def main():
     parser.add_argument('--no-val', action='store_true', default=False,
                         help='skip validation during training')
     # model saving option
-    parser.add_argument('--save-interval', type=int, default=None,
+    parser.add_argument('--save-interval', type=int, default=100,
                         help='save model interval in epochs')
 
 
     # rloss options
-    parser.add_argument('--densecrfloss', type=float, default=0,
+    parser.add_argument('--densecrfloss', type=float, default=2e-9,
                         metavar='M', help='densecrf loss (default: 0)')
-    parser.add_argument('--rloss-scale',type=float,default=1.0,
+    parser.add_argument('--rloss-scale',type=float,default=0.5,
                         help='scale factor for rloss input, choose small number for efficiency, domain: (0,1]')
     parser.add_argument('--sigma-rgb',type=float,default=15.0,
                         help='DenseCRF sigma_rgb')
-    parser.add_argument('--sigma-xy',type=float,default=80.0,
+    parser.add_argument('--sigma-xy',type=float,default=100.0,
                         help='DenseCRF sigma_xy')
     
 
@@ -412,4 +400,3 @@ def main():
 
 if __name__ == "__main__":
    main()
-
